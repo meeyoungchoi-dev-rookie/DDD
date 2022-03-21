@@ -153,3 +153,12 @@ public enum OrderState {
 + 응용 서비스는 필요한 도메인 객체를 구하거나 저장할 때 리포지터리를 사용한다
 + 응용 서비스는 트랜잭션을 관리하는데 트랜잭션 처리는 리포지터리 구현 기술에 영향을 받는다
 
+### 요철처리 흐름
++ [요청처리 흐름](https://unique-wandflower-4cc.notion.site/cdca3ff502174cf08ee268030b6bf728)
+### 인프라스트럭처 영역 개요
++ [인프라스트럭처 영역의 역할](https://unique-wandflower-4cc.notion.site/f2717298304f4163a02520a876b8d04b)
+
+### 패키지 모듈을 구성하는 방법
++ [패키지 모듈 구성방법](https://unique-wandflower-4cc.notion.site/b147cb41ecd94a918b763f6fae32588d)
+
+
