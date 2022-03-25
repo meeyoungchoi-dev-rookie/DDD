@@ -261,3 +261,49 @@ public enum OrderState {
 - 한번의 쿼리로 관련 애그리거트를 조회할 수 없다
 - 조회 성능을 높이기 위해 캐시를 적용하거나 조회 전용 저장소를 따로 구성해야 한다
 - 코드가 복잡해지는 단점이 있지만 시스템의 처리량을 높일수 있는 장점이 있다
+
+## 애그리거트 간 1:N과 M:N 연관
+
+- 컬렉션을 이용한 연관
+- 예) 카테고리와 상품
+- 한 카테고리에 한 개 이상의 상품이 속할수 있다 - 카테고리 : 상품 - 1 : N
+- 한 상품이 한 카테고리에만 속할 수 있다 - 상품 : 카테고리 = N : 1
+
+```java
+public class Category {
+    private Set<Product> products;
+    
+}
+```
+
+`Set컬렉션`
+
+- 애그리거트 간 1 : N 관계 표현
+- 1 : N 연관을 실제 구현에 반영하는 것이 요구사항을 충족하는 것과 상관없는 경우가 있다
+- 예)
+- 특정 카테고리에 있는 상품 목록을 보여주는 경우
+- 목록 관련 요구사항은 한번에 전체 상품을 보여주기 보다는 페이징을 사요하여 제품을 나눠서 보여준다
+- 단 , Product 개수가 수백에서 수만 개 정도로 많다면 이 코드를 실행할 때마다 실행 속도가 급격히 느려져 성능에 심각한 문제를 일으키게 된다
+
+```java
+
+public class Category {
+   
+   private Set<Product> products;
+   
+   public List<Product> getProducts(int page , int size) {
+       List<Product> sortedProducts = sortById(products);
+       return sotredProducts.subList((page - 1) * size, page * size);
+   }
+}
+```
+
+`M:N 연관`
+- RDBMS를 통해 M:N 연관을 구현하면 조인을 사용한다
+- JPA를 사용하면 ID 참조를 통한 M:N 단방향 연관을 구현할수 있다
+
+
+## 애그리거트를 팩토리로 사용할 때 얻을 수 있는 장점
+
+- 애그리거트가 갖고 있는 데이터를 사용하여 다른 애그리거트를 생성해야 한다면 팩토리 메서드를 구현
+- 애그리거트의 도메인 로직을 팩토리 메서드로 캡슐화 한다
