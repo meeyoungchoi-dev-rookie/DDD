@@ -437,3 +437,119 @@ public class AlarmService {
 
 - 객체의 협력 관계를 분석하여 JPA를 적용한다
 - 관계에서 주인을 판별할때 mappedBy 속성을 사용하여 주인을 지정해 준다
+
+## 애그리거트에 속한 객체가 모두 모여야 완전한 하나가 된다
+
+- 애그리거트 루트를 로딩하면 루트에 속한 모든 객체가 완전한 상태여야 한다
+- 조회시 Product 애그리거트는 완전히 하나가 되어야 한다
+- 애그리거트에 속한 객체가 조회 결과인 Product 애그리거트에 모두 있어야 한다
+
+```java
+Product product = productRepository.findById(id);
+```
+
+### 애그리거트를 완전한 상태로 만드는 방법
+
+- 애그리거트 루트에서 조회 방식을 즉시 로딩으로 설정
+- 컬렉션이나 @Entity 에 대한 매핑의 fetch 설정을 FetchType.EAGER로 설정
+- 애그리거트 루트를 조회할 때 연관된 애그리거트 구성요소를 DB에서 함께 읽어온다
+
+### 즉시 로딩의 단점
+
+```java
+@Entity
+@Table(name = "product")
+public class Product {
+    
+    
+    @OneToMany(
+            cascade = {CascadeType.PERSIST, CascadeTpe.REMOVE},
+            orphanRevomal = true,
+            fetch = FetchType.EAGER)
+    @JoinColumn(name = "product_id")
+    private List<Image> images = new ArrayList<>();
+    
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "product_option",
+             joinColumns = @JoinColumn(name = "product_id"))
+    private List<Options> options = new ArrayList<>();
+    
+    ...
+}
+```
+
+- find 메서드로 Product를 조회하면 하이버네이트는 Product , Image , Option 테이블을 조인한 쿼리를 실행한다
+
+```sql
+select
+			....
+from product p
+		 left outer join image img on p.product_id = img.product_id
+     left outer join product_option opt on p.product_id = opt.product_id
+where p.product_id = ?
+
+```
+
+- 카타시안 조인을 사용하게 되면 쿼리 결과에 중복이 발생되게 된다
+- 예)
+- Product가 갖고있는 Image가 2개이고 option이 2개인 경우 카타시안 조인을 했을때 4개의 행이 구해진다
+- product 테이블은 4번 중복되고 image와 product_option은 2번 중복된다
+- 조회의 성능이 나빠지는 문제가 발생된다
+
+## 애그리거트가 완전한 상태여야 한다
+
+- 애그리거트를 저장하거나 삭제할 때도 하나로 처리해야 한다
+- 저장 메서드는 애그리거트에 속한 모든 객체를 저장해야 한다
+- 삭제 메서드는 애그리거트에 속한 모든 객체를 삭제해야 한다
+- @Entity 타입에 대한 매핑은 cascade 속성을 사용하여 저장과 삭제시 함께 처리되도록 해야 한다
+
+```java
+@OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE},
+    orphanRemoval = true)
+@JoinColumn(name = "product_id")
+@OrderColumn(name = "list_idx")
+private List<Options> options = new ArrayList<>();
+```
+
+- `영속성` - 엔티티를 영구적으로 저장해주는 환경
+- `영속성 컨텍스트` - EntityManager를 통해 Entity를 저장하거나 조회할때 EntityManager는 영속성 컨텍스트에 Entity를 보관하고 관리한다
+
+```java
+EntityManger.persist(Entity 객체);
+```
+
+- 영속성 컨텍스트는 EntityManager를 통해 접근할 수 있고 관리된다
+- 영속성 컨텍스트는 Entity를 식별자로 구분한다
+- JPA는 트랜잭션을 커밋하는 순간 영속성 컨텍스트에 새로 저장된 Entity를 데이터베이스에 반영한다
+- 영속성 컨텍스트는 객체의 동일성을 보장한다
+- 트랜잭션을 지원하는 쓰기 지연을 수행한다
+
+### Entity의 4가지 상태
+
+- 비영속 - 영속성 컨텍스트와 전혀 관계가 없는 상태 (객체 생성)
+- 영속 - 영속성 컨텍스트에 저장된 상태
+    - 객체 생성후 EntityManager를 통해 영속성 컨텍스트에 저장
+- 준영속
+    - 영속성 컨텍스트에 저장되었다가 분리된 상태
+    - 더이상 영속성 컨텍스트가 엔티티를 관리하지 않는다
+- 삭제
+    - 삭제된 상태
+    - 영속성 컨텍스트와 데이터베이스에서 Entity 삭제
+
+### flush()
+
+- 영속성 컨텍스트의 변경 내용을 데이터베이스에 반영한다
+- 변경 감지 동작
+- 영속성 컨텍스트에 있는 모든 Entity를 스냅샷과 비교하여 수정된 Entity를 찾는다
+- 수정된 Entity는 수정 쿼리를 만들어 쓰기 지연 SQL 저장소에 저장한다
+    - 등록 , 수정 , 삭제 퀄
+- 쓰기 지연 SQL 저장소의 쿼리를 데이터베이스에 전송한다
+
+### 쓰기 지연
+- 영속성 컨텍스트에 변경이 발생했을때 바로 데이터베이스로 쿼리를 보내지 않고
+- SQL 쿼리를 버퍼에 모아뒀다가 영속성 컨텍스트가 flush 하는 시점에 쿼리를 데이터베이스로 보낸다
+
+## 식별자를 생성하는 방법
+- 사용자가 직접 생성
+- 도메인 로직으로 생성
+- DB를 통해 일련변호 사용
