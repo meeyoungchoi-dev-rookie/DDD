@@ -553,3 +553,38 @@ EntityManger.persist(Entity 객체);
 - 사용자가 직접 생성
 - 도메인 로직으로 생성
 - DB를 통해 일련변호 사용
+
+---------------------------------
+## 검색을 위한 스펙
+- 리포지터리는 애그리거트의 저장소이다
+- 애그리거트를 저장하고 찾고 삭제하는 것이 리포지터리의 기본 기능이다
+- 식별자외에 다양한 조건으로 애그리거트를 찾아야 할 때가 있다
+
+```java
+public interface OrderRepository {
+    Order findById(OrderNo id);
+    List<Order> findByOrderer(String ordererId , Date fromDate , Date toDate);
+}
+```
+
+- 검색 조건의 조합이 다양해지면 모든 조합별로 find 메서드를 정의할 수 없다
+- 검색 조건이 다양한 경우 스펙을 활용하여 문제를 해결해야 한다
+
+## 스펙
+
+- 애그리거트가 특정 조건을 충족하는 지 여부를 검사한다
+- agg 파라미터는 검사 대상이 되는 애그리거트 객체이다
+- 검사 대상 객체가 조건을 충족하면 true를 반환한다
+- 그렇지 않으면 false를 반환한다
+
+```java
+public interface Speficiation<T> {
+    public boolean isSatisfiedBy(T agg);
+}
+```
+
+### 스펙 조합
+
+- 스펙의 장점은 조합에 있다
+- 두 스펙을 AND 연산이나 OR 연산자로 조합하여 새로운 스펙을 만들 수 있다
+- 조합한 스펙을 다시 조합하여 더 복잡한 스펙을 만들 수 있다
