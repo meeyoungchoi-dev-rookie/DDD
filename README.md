@@ -603,3 +603,56 @@ public interface Speficiation<T> {
 - 쿼리에 where 조건을 붙여 필요한 데이터만 걸러내야 한다
 - 즉 메모리에서 걸래내는 방식에서 쿼리의 where를 사용하는 방식으로 변경해야 한다
 - CreaterialBuilder와 Predicate를 사용하여 검색조건을 구할 수 있다
+
+
+## 정렬 순서
+
+- JPA의 CriteriaQuery 객체의 orderBy 메서드를 사용하여 정렬 순서를 지정한다
+- CriteriaBuilder 객체의 asc 메서드와 desc 메서드로 정렬할 대상을 지정한다
+- JPQL을 사용하는 경우 order by 절을 사용하면 된다
+
+```java
+TypedQuery<Order> query = entityManager.createQuery("
+        select o from Order o" + "where o.orderer.memberId.id = :ordererId " + 
+        "order by o.number.number desc",
+        Order.class
+);
+```
+
+- JPA Criteria는 Order 타입을 사용해서 정렬 순서를 지정한다
+- Order 객체는 CriteriaBuilder 객체를 통해 생성할 수 있다
+- 정렬순서를 지정하는 코드는 리포지터리를 사용하는 응용서비스에 위치하게 된다
+- 응용서비스는 CriteriaBuilder 객체에 접근할 수 없다
+- 응용서비스에서는 다른 타입을 사용하여 리포지터리에 정렬 순서를 전달하고 JPA 리포지터리를 다시 JPA Order로 변환해 줘야 한다
+
+```java
+List<Order> orders = orderRepository.findAll(someSpec, "number.number desc");
+```
+
+## 페이징 개수 구하기
+- JPA 쿼리는 setFirstResult 메서드와 setMaxResults 메서드를 사용하여 페이징을 구현할 수 있다
+
+```java
+public List<Order> findByOrdererId(String ordererId, int startRow , int fetchSize) {
+    TypedQuery<Order> query = entityManager.createQuery(
+        "select o from Order o " + 
+        "where o.orderer.memberId.id = :ordererId " + 
+        "order by o.number.number desc"),Order.class);
+        query.setParameter("ordererId", ordererId);
+        query.setFirstResult(startRow);
+        query.setMaxResults(fetchSize);
+        return query.getResultList();
+}
+```
+
+- setFirstResult 메서드는 읽어올 첫 번째 행 번호를 지정한다
+- 첫 행은 0번부터 시작한다
+- setMaxResults 메서드는 읽어올 행 개수를 지정한다
+
+- 한 페이지에 보여줄 행 개수가 15개이고 보여줄 페이지 번호가 4라면
+- 4페이지의 첫번째 행은 46번째 행이므로 시작 행 번호 값은 45가 된다
+- 시작행 값과 결과 개수를 파라미터로 전달하면 4페이지에 해당하는 데이터 결과를 구할 수 있다
+
+```java
+List<Order> orders = findByOrdererId("madvirus", 45 , 15);
+```
