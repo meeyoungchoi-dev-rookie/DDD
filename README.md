@@ -754,3 +754,70 @@ public class OrderView {
 - 도메인 데이터와 데이터를 조작하는 도메인 로직이 한 영역에 위치하지 않고 서로 다른 영역에 위치하면 도메인 로직을 파악하기 위해 여려 영역을 분석해야 한다
 - 도메인 과 관련된 기능별로 서비스 클래스를 구분하여 구현한다
 - 각 클래스 별로 필요한 의존객체만 포함하므로 다른 기능을 구현한 코드에 영향을 주지 않는다
+
+
+## 표현영역
+
+- 사용자가 시스템을 사용할 수 있는 화면을 제공하고 제어한다
+- 사용자의 요청을 알맞은 응용 서비스에 전달하고 결과를 사용자에게 제공한다
+    - 화면을 보여주는데 필요한 데이터를 읽거나 도메인의 상태를 변경해야 할 떄 응용 서비스를 사용한다
+    - 이 과정에서 표현영역은 사용자의 요청 데이터를 응용 서비스가 요구하는 형식으로 변환하고 응용 서비스의 결과를 사용자에게 응답할 수 있는 형식으로 변환한다
+- 사용자의 세션을 관리한다
+    - 사용자의 연결상태인 세션을 관리한다
+    - 웹의 경우 쿠키나 서버 세션을 사용하여 사용자의 연결 상태를 관리한다
+    - 세션 관리는 권한 검사와도 연결된다
+
+
+## 값 검증
+
+- 표현 영역과 응용 서비스 두 곳에서 모두 수행할 수 있다
+- 표현영역에서 검증하는 방법
+
+```java
+@GetMapping
+public String join(JoinRequest joinRequest, Errors errors) {
+    checkEmpty(joinRequest.getId(), "id", errors);
+    checkEmpty(joinRequest.getName(), "name", errors);
+    ...
+    
+    
+    if (errors.hashErrors()) {
+        return formView;
+    }
+    
+    try {
+        joinService.join(joinRequest);
+        return successView;
+    } catch (DuplicationException ex) {
+        errors.rejectValue(ex.getPropertyName(), "duplicate");
+        return formView;
+    }
+}
+
+private void checkEmpty(String value, String property, Errors errors) {
+    if (isEmpty(value)) {
+        errors.rejectValue(property, "empty");
+    }
+}
+```
+
+- 응용 서비스에서 검증하는 방법
+
+```java
+public class JoinService {
+    public void join(JoinRequest request, Errors errors) {
+        new JoinRequestValidator().validate(joinRequest, errors);
+        if (!errors.hasErrors()) checkDuplicateId(joinReq.getId(), errors)
+        if (errors.hasErrors()) return;
+    }
+}
+```
+
+## 권한 검사
+
+- 개발할 시스템 마다 권한의 복잡도가 달라진다
+- 단순한 시스템은 인증 여부만 검사하면 되는데 , 어떤 시스템은 관리자인지 여부에 따라 사용할 수 있는 기능이 달라지기도 한다
+- 표현영역 , 응용 서비스 영역 , 도메인 영역에서 권한 검사를 수행할 수 있다
+- 서블릿 필터를 통해 사용자의 인증 정보를 생성하고 인증 여부를 검사한다
+- 스프링 시큐리티는 필터를 사용해서 인증 정보를 생성하고 웹 접근을 제어하는 기능을 제공한다
+- AOP를 활용하여 애노테이션으로 서비스 메서드에 대한 권한검사를 할 수 있는 기능을 제공한다
