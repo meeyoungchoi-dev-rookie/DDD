@@ -894,3 +894,21 @@ public class Order {
 
 - DB를 사용한 LockManager 구현
 - MySQL을 사용하는 경우 잠금 정보를 저장할 테이블과 인덱스를 생성한다
+
+
+
+### BOUNDED CONTEXT
+
+- 한개의 BOUNDED CONTEXT에서 여러 하위 도메인을 포함다더라도 하위 도메인마다 구분되는 패키지를 갖도록 구현해야 한다
+- 그래서 모델이 서로 섞이지 않아 하위 도메인 마다 BOUNDED CONTEXT를 갖는 효과를 낼 수 있다
+
+### BOUNDED CONTEXT의 구현
+
+- BOUNDED CONTEXT는 도메인 기능을 사용자에게 제공하는데 필요한 표현 영역 , 응용 서비스, 인프라 영역 등을 모두 포함한다
+- 도메인 모델의 데이터 구조가 바뀌면 DB 테이블 스키마도 함께 변경해야 하므로 해당 테이블도 BOUNDED CONTEXT에 포함된다
+
+### BOUNDED CONTEXT 간 통합
+
+- 마이크로서비스와 BOUNDED CONTEXT
+- 마이크로서비스는 애플리케이션ㅇ르 작은 서비스로 나누어 개발하는 아키텍처 스타일이다
+- 개발 서비스를 독립된 프로세스로 실행하고 각 서비스가 REST API나 메시징을 사용하여 통신하는 구조를 갖는다
